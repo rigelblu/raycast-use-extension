@@ -1,0 +1,9 @@
+# Use $REPO/docs/conventions/metadata.md
+[repo]
+product = "@use"
+owner = "tom-rigelblu"
+rb_drive_store = "raycast-use-extension"
+
+[project]
+project_type = "new product"
+product_id = ["use"]

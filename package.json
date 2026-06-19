@@ -1,0 +1,252 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "use-skill",
+  "title": "Use Skill",
+  "description": "Search and use agent skills (claude, codex, etc.) in one place",
+  "icon": "extension-icon.png",
+  "author": "thosiawa",
+  "categories": [
+    "Developer Tools"
+  ],
+  "license": "MIT",
+  "commands": [
+    {
+      "name": "search-skills",
+      "title": "Use Agent Skill",
+      "subtitle": "Agent Skills",
+      "description": "Search and use agent skills (claude, codex, etc.) in one place",
+      "mode": "view",
+      "preferences": [
+        {
+          "name": "defaultAgent",
+          "type": "dropdown",
+          "title": "Default Agent Filter",
+          "description": "Agent source selected by default when opening the command",
+          "required": false,
+          "default": "all",
+          "data": [
+            {
+              "title": "All",
+              "value": "all"
+            },
+            {
+              "title": "Amp",
+              "value": "amp"
+            },
+            {
+              "title": "Antigravity",
+              "value": "antigravity"
+            },
+            {
+              "title": "Claude",
+              "value": "claude-code"
+            },
+            {
+              "title": "Codex",
+              "value": "codex"
+            },
+            {
+              "title": "Copilot",
+              "value": "copilot"
+            },
+            {
+              "title": "Droid",
+              "value": "droid"
+            },
+            {
+              "title": "Gemini",
+              "value": "gemini"
+            },
+            {
+              "title": "Kilo",
+              "value": "kilo"
+            },
+            {
+              "title": "OpenCode",
+              "value": "opencode"
+            },
+            {
+              "title": "Pi",
+              "value": "pi"
+            },
+            {
+              "title": "Warp",
+              "value": "warp"
+            },
+            {
+              "title": "Custom Project 1",
+              "value": "customProject1"
+            },
+            {
+              "title": "Custom Project 2",
+              "value": "customProject2"
+            },
+            {
+              "title": "Custom Project 3",
+              "value": "customProject3"
+            },
+            {
+              "title": "Custom Project 4",
+              "value": "customProject4"
+            },
+            {
+              "title": "Custom Project 5",
+              "value": "customProject5"
+            }
+          ]
+        },
+        {
+          "name": "prefixStyle",
+          "type": "dropdown",
+          "title": "Prefix Style",
+          "description": "Choose between agent-native prefixes or a consistent general prefix",
+          "required": false,
+          "default": "native",
+          "data": [
+            {
+              "title": "Agent Native (e.g. / for Claude, use skill for Gemini)",
+              "value": "native"
+            },
+            {
+              "title": "Consistent General Prefix",
+              "value": "general"
+            }
+          ]
+        },
+        {
+          "name": "generalPrefix",
+          "type": "textfield",
+          "title": "General Prefix",
+          "description": "The prefix to use when 'Consistent General Prefix' is selected",
+          "required": false,
+          "placeholder": "use skill",
+          "default": "use skill"
+        },
+        {
+          "name": "argumentHintKey",
+          "type": "textfield",
+          "title": "Advanced",
+          "description": "Frontmatter property name used for argument hints (default: argument-hint)",
+          "required": false,
+          "placeholder": "argument-hint"
+        },
+        {
+          "name": "directExecPrefix",
+          "type": "textfield",
+          "title": "Direct Execution",
+          "description": "Prefix shown before direct execution skills (default: @!)",
+          "required": false,
+          "placeholder": "@!"
+        },
+        {
+          "name": "directExecProperty",
+          "type": "textfield",
+          "title": "Direct Execution Property",
+          "description": "Frontmatter property that identifies a direct execution skill (default: disable-model-invocation)",
+          "required": false,
+          "placeholder": "disable-model-invocation"
+        },
+        {
+          "name": "customProjectName1",
+          "type": "textfield",
+          "title": "Project 1 Skills",
+          "description": "Display name (shown in filter and tag).",
+          "required": false,
+          "placeholder": "Project 1"
+        },
+        {
+          "name": "customProjectPath1",
+          "type": "textfield",
+          "title": "Project 1 Path",
+          "description": "Folder to scan for SKILL.md files.",
+          "required": false,
+          "placeholder": "~/.my-project/skills"
+        },
+        {
+          "name": "customProjectName2",
+          "type": "textfield",
+          "title": "Project 2 Skills",
+          "description": "Display name (shown in filter and tag).",
+          "required": false,
+          "placeholder": "Project 2"
+        },
+        {
+          "name": "customProjectPath2",
+          "type": "textfield",
+          "title": "Project 2 Path",
+          "description": "Folder to scan for SKILL.md files.",
+          "required": false,
+          "placeholder": "~/.my-project/skills"
+        },
+        {
+          "name": "customProjectName3",
+          "type": "textfield",
+          "title": "Project 3 Skills",
+          "description": "Display name (shown in filter and tag).",
+          "required": false,
+          "placeholder": "Project 3"
+        },
+        {
+          "name": "customProjectPath3",
+          "type": "textfield",
+          "title": "Project 3 Path",
+          "description": "Folder to scan for SKILL.md files.",
+          "required": false,
+          "placeholder": "~/.my-project/skills"
+        },
+        {
+          "name": "customProjectName4",
+          "type": "textfield",
+          "title": "Project 4 Skills",
+          "description": "Display name (shown in filter and tag).",
+          "required": false,
+          "placeholder": "Project 4"
+        },
+        {
+          "name": "customProjectPath4",
+          "type": "textfield",
+          "title": "Project 4 Path",
+          "description": "Folder to scan for SKILL.md files.",
+          "required": false,
+          "placeholder": "~/.my-project/skills"
+        },
+        {
+          "name": "customProjectName5",
+          "type": "textfield",
+          "title": "Project 5 Skills",
+          "description": "Display name (shown in filter and tag).",
+          "required": false,
+          "placeholder": "Project 5"
+        },
+        {
+          "name": "customProjectPath5",
+          "type": "textfield",
+          "title": "Project 5 Path",
+          "description": "Folder to scan for SKILL.md files.",
+          "required": false,
+          "placeholder": "~/.my-project/skills"
+        }
+      ]
+    }
+  ],
+  "scripts": {
+    "build": "ray build",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint",
+    "test": "tsc -p tsconfig.test.json && node --require ./test/raycast-mock.js --test .test-build/test/*.test.js"
+  },
+  "dependencies": {
+    "@raycast/api": "^1.93.3",
+    "@raycast/utils": "^1.19.1",
+    "gray-matter": "^4.0.3"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^1.0.11",
+    "@types/node": "22.13.10",
+    "@types/react": "19.0.10",
+    "eslint": "^8.57.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2"
+  }
+}

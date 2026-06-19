@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+build/
+dist/
+.test-build/
+
+# IDE
+.idea/
+.vscode/
+
+# Lock files (use npm only — Raycast requires npm)
+bun.lock
+yarn.lock
+pnpm-lock.yaml
+
+# Raycast
+.raycast/
+
+# RB Project files
+.rb-drive
+
+# OS
+.DS_Store
