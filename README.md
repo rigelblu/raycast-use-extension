@@ -28,6 +28,8 @@ Built-in supported agents are scanned automatically. Agents without a valid dire
 
 The agent filter persists between uses. Set a default agent in preferences to choose the initial filter before you manually change it.
 Changing the target agent in the argument form persists for future paste actions until you reset it.
+When Codex Desktop App is the active paste target, paste actions use its rich skill-link format:
+`[$skill](/absolute/path/to/SKILL.md) "args"`. Other apps keep the selected agent's normal invocation format.
 
 # 🔵⋯ Usage
 | Action                | Shortcut | Description                                                                        |

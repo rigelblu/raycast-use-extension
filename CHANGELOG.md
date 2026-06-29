@@ -4,6 +4,7 @@ title: Changelog
 
 # 🔵⋯ [Unreleased]
 ## 🟠⋯ Added
+- 2026-06-29 - feat (user need) | Codex Desktop App paste target uses rich skill links (`[$skill](/path/SKILL.md) "args"`)
 - 2026-05-23 - feat (design user need) | Antigravity agent support (~/.gemini/antigravity/skills/)
 - 2026-05-16 - ux (design user need) | sticky target agent override for paste actions
 - 2026-05-16 - ux (design user need) | command-enter paste-now shortcut from the skill list

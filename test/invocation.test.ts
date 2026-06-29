@@ -1,7 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { formatSkillInvocation, getPastePrefix, withPrefix } from "../src/lib/invocation";
+import {
+  formatCodexDesktopInvocation,
+  formatSkillInvocation,
+  formatSkillPasteContent,
+  getPastePrefix,
+  withPrefix,
+} from "../src/lib/invocation";
 import type { CommandPreferences } from "../src/lib/preferences";
+import type { Skill } from "../src/lib/types";
 
 const NATIVE: CommandPreferences = {};
 
@@ -26,6 +33,35 @@ test("formats Codex agent with native @ prefix (slash style, no backticks, no sp
   assert.equal(formatSkillInvocation("codex", "vcs-change", ["arg"], NATIVE), 'vcs-change "arg"');
   assert.equal(withPrefix("vcs-change", "@"), "@vcs-change");
   assert.equal(withPrefix('vcs-change "arg"', "@"), '@vcs-change "arg"');
+});
+
+test("formats Codex Desktop App invocations as a markdown skill link with quoted args", () => {
+  assert.equal(
+    formatCodexDesktopInvocation(
+      "review-code-quality",
+      "/Users/tomhosiawa/src/rb/tom-home-branches/tom.home.main/dotfiles/rb-agents/skills/review-code-quality/SKILL.md",
+      ["deep", "change-id", "nv"],
+    ),
+    '[$review-code-quality](/Users/tomhosiawa/src/rb/tom-home-branches/tom.home.main/dotfiles/rb-agents/skills/review-code-quality/SKILL.md) "deep" "change-id" "nv"',
+  );
+});
+
+test("uses Codex Desktop App format only for the Codex Desktop paste surface", () => {
+  const skill: Skill = {
+    name: "review-code-quality",
+    description: "Review code",
+    agent: "codex",
+    filePath: "/Users/tomhosiawa/.codex/skills/review-code-quality/SKILL.md",
+  };
+
+  assert.equal(
+    formatSkillPasteContent(skill, "codex", NATIVE, "codex-desktop", ["deep", "change-id", "nv"]),
+    '[$review-code-quality](/Users/tomhosiawa/.codex/skills/review-code-quality/SKILL.md) "deep" "change-id" "nv"',
+  );
+  assert.equal(
+    formatSkillPasteContent(skill, "codex", NATIVE, "default", ["deep", "change-id", "nv"]),
+    '@review-code-quality "deep" "change-id" "nv"',
+  );
 });
 
 test("adds a separator unless the prefix is slash-style or already spaced", () => {
@@ -79,7 +115,10 @@ test("general prefix falls back to default when blank, whitespace, or missing", 
   assert.equal(getPastePrefix("warp", { prefixStyle: "general" }), "use skill");
 
   // formatSkillInvocation treats the fallback as wrapped style
-  assert.equal(formatSkillInvocation("warp", "vcs-change", undefined, { prefixStyle: "general", generalPrefix: "" }), "`vcs-change`");
+  assert.equal(
+    formatSkillInvocation("warp", "vcs-change", undefined, { prefixStyle: "general", generalPrefix: "" }),
+    "`vcs-change`",
+  );
   assert.equal(formatSkillInvocation("warp", "vcs-change", undefined, { prefixStyle: "general" }), "`vcs-change`");
 });
 
