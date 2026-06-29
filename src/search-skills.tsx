@@ -14,7 +14,8 @@ import { useCachedPromise } from "@raycast/utils";
 import { loadAllSkills } from "./lib/skill-discovery";
 import type { Skill, Agent } from "./lib/types";
 import { getPrefs, type CommandPreferences } from "./lib/preferences";
-import { formatSkillInvocation, getPastePrefix, withPrefix } from "./lib/invocation";
+import { formatSkillInvocation, formatSkillPasteContent, formatSkillPastePreview } from "./lib/invocation";
+import { detectPasteSurface, type PasteSurface } from "./lib/paste-target";
 import { AGENTS, normalizeAgent, getSourceName } from "./lib/agent-config";
 import { ArgumentForm } from "./argument-form";
 import {
@@ -32,14 +33,23 @@ function skillNameWithHint(skill: Skill): string {
   return hint ? `${skill.name} ${hint}` : skill.name;
 }
 
-function skillInvocationPreview(skill: Skill, targetAgent: Agent, prefs: CommandPreferences): string {
-  const invocation = formatSkillInvocation(targetAgent, skill.name, undefined, prefs);
-  const hint = skill.argumentHint?.trim();
-  return hint ? `${invocation} ${hint}` : invocation;
+function skillPasteContent(
+  skill: Skill,
+  targetAgent: Agent,
+  prefs: CommandPreferences,
+  pasteSurface: PasteSurface,
+): string {
+  return formatSkillPastePreview(skill, targetAgent, prefs, pasteSurface);
 }
 
-function skillPasteContent(skill: Skill, targetAgent: Agent, prefs: CommandPreferences): string {
-  return withPrefix(skillInvocationPreview(skill, targetAgent, prefs), getPastePrefix(targetAgent, prefs));
+async function pasteSkill(skill: Skill, targetAgent: Agent, prefs: CommandPreferences, args?: string[]) {
+  const pasteSurface = await detectPasteSurface();
+  await Clipboard.paste(formatSkillPasteContent(skill, targetAgent, prefs, pasteSurface, args));
+}
+
+async function pasteSkillPreview(skill: Skill, targetAgent: Agent, prefs: CommandPreferences) {
+  const pasteSurface = await detectPasteSurface();
+  await Clipboard.paste(skillPasteContent(skill, targetAgent, prefs, pasteSurface));
 }
 
 function directExecPrefix(): string {
@@ -75,6 +85,7 @@ export default function SearchSkills() {
   );
   const selectedAgent = sharedSelectedAgent ?? defaultAgent;
   const [targetAgentOverride, setTargetAgentOverride] = useState<Agent | undefined>();
+  const [pasteSurface, setPasteSurface] = useState<PasteSurface>("default");
   // Bumped on pop-back to force AgentDropdown remount; Raycast's List.Dropdown ignores value prop changes.
   const [popCount, setPopCount] = useState(0);
 
@@ -85,6 +96,7 @@ export default function SearchSkills() {
 
   useEffect(() => {
     refreshAgentState();
+    detectPasteSurface().then(setPasteSurface);
   }, []);
 
   function handleAgentSelect(value: string) {
@@ -159,6 +171,7 @@ export default function SearchSkills() {
             skill={skill}
             selectedAgent={selectedAgent}
             targetAgentOverride={targetAgentOverride}
+            pasteSurface={pasteSurface}
             onTargetAgentChange={handleTargetAgentChange}
             onTargetAgentReset={handleTargetAgentReset}
             onPop={handlePop}
@@ -201,6 +214,7 @@ function SkillListItem({
   skill,
   selectedAgent,
   targetAgentOverride,
+  pasteSurface,
   onTargetAgentChange,
   onTargetAgentReset,
   onPop,
@@ -208,6 +222,7 @@ function SkillListItem({
   skill: Skill;
   selectedAgent: string;
   targetAgentOverride?: Agent;
+  pasteSurface: PasteSurface;
   onTargetAgentChange: (agent: Agent) => void;
   onTargetAgentReset: () => void;
   onPop?: () => void;
@@ -221,7 +236,6 @@ function SkillListItem({
   const color = profile?.color || "raycast-secondary-text";
   const iconSource = profile?.iconSource || Icon.CommandSymbol;
   const prefs = getPrefs();
-  const pasteContent = skillPasteContent(skill, targetAgent, prefs);
 
   return (
     <List.Item
@@ -248,6 +262,7 @@ function SkillListItem({
                 <ArgumentForm
                   skill={skill}
                   targetAgentOverride={visibleAgentOverride}
+                  pasteSurface={pasteSurface}
                   onTargetAgentChange={onTargetAgentChange}
                   onTargetAgentReset={onTargetAgentReset}
                 />
@@ -261,7 +276,7 @@ function SkillListItem({
                 icon={Icon.Clipboard}
                 shortcut={{ modifiers: [], key: "tab" }}
                 onAction={async () => {
-                  await Clipboard.paste(pasteContent);
+                  await pasteSkill(skill, targetAgent, prefs);
                 }}
               />
               <Action
@@ -269,7 +284,12 @@ function SkillListItem({
                 icon={Icon.Text}
                 shortcut={{ modifiers: ["cmd", "shift"], key: "p" }}
                 onAction={async () => {
-                  await Clipboard.paste(formatSkillInvocation(targetAgent, skill.name, undefined, prefs));
+                  const surface = await detectPasteSurface();
+                  await Clipboard.paste(
+                    surface === "codex-desktop"
+                      ? formatSkillPasteContent(skill, targetAgent, prefs, surface)
+                      : formatSkillInvocation(targetAgent, skill.name, undefined, prefs),
+                  );
                 }}
               />
             </>
@@ -279,7 +299,7 @@ function SkillListItem({
             icon={Icon.Clipboard}
             shortcut={{ modifiers: ["cmd"], key: "return" }}
             onAction={async () => {
-              await Clipboard.paste(pasteContent);
+              await pasteSkillPreview(skill, targetAgent, prefs);
               await popToRoot();
             }}
           />
@@ -330,6 +350,7 @@ function SkillListItem({
               <SkillDetailView
                 skill={skill}
                 targetAgentOverride={visibleAgentOverride}
+                pasteSurface={pasteSurface}
                 onTargetAgentChange={onTargetAgentChange}
                 onTargetAgentReset={onTargetAgentReset}
                 onPop={onPop}
@@ -351,7 +372,12 @@ function SkillListItem({
   );
 }
 
-function buildDetailMarkdown(skill: Skill, targetAgent: Agent, prefs: CommandPreferences): string {
+function buildDetailMarkdown(
+  skill: Skill,
+  targetAgent: Agent,
+  prefs: CommandPreferences,
+  pasteSurface: PasteSurface,
+): string {
   const isDirect = skill.disableModelInvocation === true;
   const lines: string[] = [];
 
@@ -380,13 +406,7 @@ function buildDetailMarkdown(skill: Skill, targetAgent: Agent, prefs: CommandPre
     lines.push("", "---", "", `**Argument hint:** \`${skill.argumentHint}\``);
   }
 
-  const prefix = getPastePrefix(targetAgent, prefs);
-  lines.push(
-    "",
-    "---",
-    "",
-    `**Paste into agent:** ${withPrefix(skillInvocationPreview(skill, targetAgent, prefs), prefix)}`,
-  );
+  lines.push("", "---", "", `**Paste into agent:** ${skillPasteContent(skill, targetAgent, prefs, pasteSurface)}`);
 
   if (skill.body) {
     const verbatimBody = skill.body.split("\n").map((line) => `    ${line}`);
@@ -399,20 +419,21 @@ function buildDetailMarkdown(skill: Skill, targetAgent: Agent, prefs: CommandPre
 function SkillDetailView({
   skill,
   targetAgentOverride,
+  pasteSurface,
   onTargetAgentChange,
   onTargetAgentReset,
   onPop,
 }: {
   skill: Skill;
   targetAgentOverride?: Agent;
+  pasteSurface: PasteSurface;
   onTargetAgentChange: (agent: Agent) => void;
   onTargetAgentReset: () => void;
   onPop?: () => void;
 }) {
   const targetAgent = targetAgentOverride ?? skill.agent;
   const prefs = getPrefs();
-  const markdown = buildDetailMarkdown(skill, targetAgent, prefs);
-  const pasteContent = skillPasteContent(skill, targetAgent, prefs);
+  const markdown = buildDetailMarkdown(skill, targetAgent, prefs, pasteSurface);
 
   return (
     <Detail
@@ -420,11 +441,13 @@ function SkillDetailView({
       markdown={markdown}
       actions={
         <ActionPanel>
-          <Action.Paste
+          <Action
             title="Paste to Active App"
             icon={Icon.Clipboard}
-            content={pasteContent}
-            onPaste={() => popToRoot()}
+            onAction={async () => {
+              await pasteSkillPreview(skill, targetAgent, prefs);
+              await popToRoot();
+            }}
           />
           {skill.argumentHint && (
             <Action.Push
@@ -434,6 +457,7 @@ function SkillDetailView({
                 <ArgumentForm
                   skill={skill}
                   targetAgentOverride={targetAgentOverride}
+                  pasteSurface={pasteSurface}
                   onTargetAgentChange={onTargetAgentChange}
                   onTargetAgentReset={onTargetAgentReset}
                 />

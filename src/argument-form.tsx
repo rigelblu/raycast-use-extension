@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Action, ActionPanel, Form, Icon, popToRoot, showHUD, Clipboard } from "@raycast/api";
 import type { Skill, Agent } from "./lib/types";
-import { formatSkillInvocation, getPastePrefix, withPrefix } from "./lib/invocation";
+import { formatCodexDesktopInvocation, formatSkillInvocation, getPastePrefix, withPrefix } from "./lib/invocation";
+import { detectPasteSurface, type PasteSurface } from "./lib/paste-target";
 import { getPrefs } from "./lib/preferences";
 import { fillPromptBody } from "./lib/prompt-template";
 import { parseArgumentHint } from "./lib/argument-hints";
@@ -16,17 +17,20 @@ import {
 export function ArgumentForm({
   skill,
   targetAgentOverride,
+  pasteSurface: initialPasteSurface = "default",
   onTargetAgentChange,
   onTargetAgentReset,
 }: {
   skill: Skill;
   targetAgentOverride?: Agent;
+  pasteSurface?: PasteSurface;
   onTargetAgentChange?: (agent: Agent) => void;
   onTargetAgentReset?: () => void;
 }) {
   const parsedArgumentHint = useMemo(() => parseArgumentHint(skill.argumentHint ?? ""), [skill.argumentHint]);
   const [selectedAgent, setSelectedAgent] = useState<Agent>(targetAgentOverride ?? skill.agent);
   const [hasTargetAgentOverride, setHasTargetAgentOverride] = useState(Boolean(targetAgentOverride));
+  const [pasteSurface, setPasteSurface] = useState<PasteSurface>(initialPasteSurface);
   const prefs = getPrefs();
   const prefix = getPastePrefix(selectedAgent, prefs);
 
@@ -69,7 +73,16 @@ export function ArgumentForm({
     return collectArgParts().join(" ");
   }
 
-  function buildPasteText(): string {
+  function buildCodexDesktopPasteText(): string {
+    const invocationArgs = collectArgParts();
+    return formatCodexDesktopInvocation(
+      skill.name,
+      skill.filePath,
+      invocationArgs.length > 0 ? invocationArgs : undefined,
+    );
+  }
+
+  function buildAgentPasteText(): string {
     if (parsedArgumentHint.mode === "choices") {
       // Choice is a keyword — include unquoted as part of the name. Only quote user-supplied args.
       const userArgs = argValue ? [argValue] : undefined;
@@ -79,10 +92,21 @@ export function ArgumentForm({
     return formatSkillInvocation(selectedAgent, skill.name, parts.length > 0 ? parts : undefined, prefs);
   }
 
+  function buildPasteTextForSurface(surface: PasteSurface): string {
+    return surface === "codex-desktop" ? buildCodexDesktopPasteText() : buildAgentPasteText();
+  }
+
+  function buildPasteContentForSurface(surface: PasteSurface): string {
+    const text = buildPasteTextForSurface(surface);
+    return surface === "codex-desktop" ? text : withPrefix(text, prefix);
+  }
+
   const pastePreview = useMemo(
-    () => buildPasteText(),
-    [parsedArgumentHint, selectedChoice, argValue, values, selectedAgent, skill.name],
+    () => buildPasteTextForSurface(pasteSurface),
+    [parsedArgumentHint, selectedChoice, argValue, values, selectedAgent, skill.name, skill.filePath, pasteSurface],
   );
+
+  const pasteContent = useMemo(() => buildPasteContentForSurface(pasteSurface), [pastePreview, pasteSurface, prefix]);
 
   const argsText = useMemo(() => buildArgsText(), [parsedArgumentHint, selectedChoice, argValue, values]);
 
@@ -96,17 +120,20 @@ export function ArgumentForm({
   useEffect(() => {
     let cancelled = false;
 
+    detectPasteSurface().then((surface) => {
+      if (!cancelled) setPasteSurface(surface);
+    });
+
     if (targetAgentOverride) {
       setSelectedAgent(targetAgentOverride);
       setHasTargetAgentOverride(true);
-      return;
+    } else {
+      loadTargetAgentOverride().then((agent) => {
+        if (cancelled) return;
+        setSelectedAgent(agent ?? skill.agent);
+        setHasTargetAgentOverride(Boolean(agent));
+      });
     }
-
-    loadTargetAgentOverride().then((agent) => {
-      if (cancelled) return;
-      setSelectedAgent(agent ?? skill.agent);
-      setHasTargetAgentOverride(Boolean(agent));
-    });
 
     return () => {
       cancelled = true;
@@ -137,16 +164,20 @@ export function ArgumentForm({
             title="Paste"
             icon={Icon.Clipboard}
             onSubmit={async () => {
-              await Clipboard.paste(withPrefix(pastePreview, prefix));
+              const surface = await detectPasteSurface();
+              await Clipboard.paste(buildPasteContentForSurface(surface));
               await popToRoot();
             }}
           />
-          <Action.Paste
+          <Action
             title="Paste Without Prefix"
             icon={Icon.Text}
             shortcut={{ modifiers: ["cmd", "opt"], key: "p" }}
-            content={pastePreview}
-            onPaste={() => popToRoot()}
+            onAction={async () => {
+              const surface = await detectPasteSurface();
+              await Clipboard.paste(buildPasteTextForSurface(surface));
+              await popToRoot();
+            }}
           />
           {argsText ? (
             <Action.Paste
@@ -273,7 +304,7 @@ export function ArgumentForm({
         <Form.Description title="Hint" text={skill.argumentHint} />
       )}
       <Form.Separator />
-      <Form.Description title="Paste into agent" text={withPrefix(pastePreview, prefix)} />
+      <Form.Description title="Paste into agent" text={pasteContent} />
     </Form>
   );
 }
