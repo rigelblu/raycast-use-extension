@@ -11,6 +11,14 @@ const PASTE_PREFIX_BY_STYLE: Record<InvocationStyle, string> = {
   wrapped: DEFAULT_GENERAL_PREFIX,
 };
 
+/** Sigils that attach straight to a skill name — no separating space, no backtick wrap. */
+const SIGIL_PREFIXES = new Set(["/", "@", "$"]);
+
+/** True when the prefix ends in a sigil: "/", "@", "$", or a word ending in one like "foo/". */
+function isSigilPrefix(prefix: string): boolean {
+  return SIGIL_PREFIXES.has(prefix.slice(-1));
+}
+
 function normalizeGeneralPrefix(prefix: string | undefined): string {
   return prefix?.trim() || DEFAULT_GENERAL_PREFIX;
 }
@@ -55,10 +63,10 @@ export function formatSkillInvocation(
 
   let style: InvocationStyle;
   if (prefs.prefixStyle === "general") {
-    // A general prefix ending in "/" or "@" is treated as slash-style (no backtick wrap).
-    // "/" → slash, "@" → slash, "foo/" → slash, "call agent" → wrapped.
+    // A general prefix ending in a sigil is treated as slash-style (no backtick wrap).
+    // "/" → slash, "@" → slash, "$" → slash, "foo/" → slash, "call agent" → wrapped.
     const val = normalizeGeneralPrefix(prefs.generalPrefix);
-    style = val.endsWith("/") || val.endsWith("@") ? "slash" : "wrapped";
+    style = isSigilPrefix(val) ? "slash" : "wrapped";
   } else {
     style = AGENTS[agent]?.invocationStyle || "wrapped";
   }
@@ -105,6 +113,7 @@ export function formatSkillPastePreview(
 
 export function withPrefix(text: string, prefix: string): string {
   if (!prefix) return text;
-  const spacer = prefix.endsWith("/") || prefix.endsWith("@") || /\s$/.test(prefix) ? "" : " ";
+  // A sigil attaches directly; a prefix the author already spaced needs no second space.
+  const spacer = isSigilPrefix(prefix) || /\s$/.test(prefix) ? "" : " ";
   return `${prefix}${spacer}${text}`;
 }

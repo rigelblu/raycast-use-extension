@@ -28,11 +28,11 @@ test("returns agent paste prefixes by invocation style", () => {
   assert.equal(getPastePrefix("gemini", NATIVE), "use skill");
 });
 
-test("formats Codex agent with native @ prefix (slash style, no backticks, no space separator)", () => {
-  assert.equal(getPastePrefix("codex", NATIVE), "@");
+test("formats Codex agent with native $ prefix (slash style, no backticks, no space separator)", () => {
+  assert.equal(getPastePrefix("codex", NATIVE), "$");
   assert.equal(formatSkillInvocation("codex", "vcs-change", ["arg"], NATIVE), 'vcs-change "arg"');
-  assert.equal(withPrefix("vcs-change", "@"), "@vcs-change");
-  assert.equal(withPrefix('vcs-change "arg"', "@"), '@vcs-change "arg"');
+  assert.equal(withPrefix("vcs-change", "$"), "$vcs-change");
+  assert.equal(withPrefix('vcs-change "arg"', "$"), '$vcs-change "arg"');
 });
 
 test("formats Codex Desktop App invocations as a markdown skill link with quoted args", () => {
@@ -60,7 +60,7 @@ test("uses Codex Desktop App format only for the Codex Desktop paste surface", (
   );
   assert.equal(
     formatSkillPasteContent(skill, "codex", NATIVE, "default", ["deep", "change-id", "nv"]),
-    '@review-code-quality "deep" "change-id" "nv"',
+    '$review-code-quality "deep" "change-id" "nv"',
   );
 });
 
@@ -70,7 +70,24 @@ test("adds a separator unless the prefix is slash-style or already spaced", () =
   assert.equal(withPrefix("vcs-change", "@skill "), "@skill vcs-change");
   assert.equal(withPrefix("vcs-change", "/"), "/vcs-change");
   assert.equal(withPrefix("vcs-change", "@"), "@vcs-change");
+  assert.equal(withPrefix("vcs-change", "$"), "$vcs-change");
   assert.equal(withPrefix("vcs-change", ""), "vcs-change");
+});
+
+test("treats a general $ prefix as slash-style for every agent, not just Codex", () => {
+  const prefs = { prefixStyle: "general" as const, generalPrefix: "$" };
+  // gemini is wrapped-style natively, warp is slash-style — the general prefix overrides both.
+  for (const agent of ["gemini", "warp"] as const) {
+    assert.equal(formatSkillInvocation(agent, "vcs-change", undefined, prefs), "vcs-change");
+    assert.equal(withPrefix("vcs-change", getPastePrefix(agent, prefs)), "$vcs-change");
+  }
+});
+
+test("leaves the Codex Desktop rich link untouched by the $ prefix change", () => {
+  assert.equal(
+    formatCodexDesktopInvocation("vcs-change", "/skills/vcs-change/SKILL.md", ["arg"]),
+    '[$vcs-change](/skills/vcs-change/SKILL.md) "arg"',
+  );
 });
 
 test("preserves or normalizes separators for custom general prefixes", () => {
