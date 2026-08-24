@@ -45,7 +45,7 @@ export const AGENTS: Record<Agent, AgentProfile> = {
     iconSource: "logo-codex.svg",
     invocationStyle: "slash",
     scanPath: "~/.codex/skills",
-    nativePrefix: "@",
+    nativePrefix: "$",
   },
   copilot: {
     displayName: "Copilot",

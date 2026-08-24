@@ -3,7 +3,8 @@ title: Changelog
 ---
 
 # 🔵⋯ [Unreleased]
-(nothing yet)
+## 🟠⋯ Added
+- 2026-08-24 - feat (user need) | Codex skill pastes lead with `$` in the CLI, matching the sigil the Desktop app already showed inside its rich link
 
 ---
 
