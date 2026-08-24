@@ -50,7 +50,7 @@ description: Too deep skill
 `,
     );
 
-    const result = await getAgentSkills({ agent: "codex", basePath });
+    const result = await getAgentSkills({ agents: ["codex"], basePath, userConfigured: false });
 
     assert.equal(result.error, undefined);
     assert.equal(result.skills.length, 2);
@@ -62,6 +62,7 @@ description: Too deep skill
       name: "test-skill",
       description: "Test skill",
       agent: "codex",
+      agents: ["codex"],
       filePath: join(basePath, "valid", "SKILL.md"),
       body: "Use this body.",
       argumentHint: "mode:[new | append]",
@@ -87,7 +88,7 @@ ARGUMENT_HINT: topic
 `,
     );
 
-    const result = await getAgentSkills({ agent: "gemini", basePath }, "argument-hint");
+    const result = await getAgentSkills({ agents: ["gemini"], basePath, userConfigured: false }, "argument-hint");
 
     assert.equal(result.skills[0]?.argumentHint, "topic");
   } finally {
@@ -98,8 +99,8 @@ ARGUMENT_HINT: topic
 test("silences missing default directories but reports missing user-configured directories", async () => {
   const missingPath = join(tmpdir(), `use-skill-missing-${Date.now()}`);
 
-  assert.deepEqual(await getAgentSkills({ agent: "codex", basePath: missingPath }), { skills: [] });
+  assert.deepEqual(await getAgentSkills({ agents: ["codex"], basePath: missingPath, userConfigured: false }), { skills: [] });
 
-  const result = await getAgentSkills({ agent: "customProject1", basePath: missingPath, userConfigured: true });
+  const result = await getAgentSkills({ agents: ["customProject1"], basePath: missingPath, userConfigured: true });
   assert.deepEqual(result, { skills: [], error: `Skill directory not found: ${missingPath}` });
 });

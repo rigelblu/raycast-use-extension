@@ -1,7 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import matter from "gray-matter";
-import type { Skill, Agent, AgentConfig } from "./types";
+import type { Skill, Agent, ScanTarget } from "./types";
 
 const SKILL_FILENAME = "SKILL.md";
 
@@ -22,7 +22,7 @@ function findValue(
 function buildSkill(
   content: string,
   filePath: string,
-  agent: Agent,
+  agents: Agent[],
   argumentHintKey?: string,
   directExecProperty?: string,
 ): Skill | null {
@@ -30,7 +30,10 @@ function buildSkill(
   let body: string;
 
   try {
-    ({ data, content: body } = matter(content));
+    // Pass options so gray-matter skips its module-global cache, which is keyed by the file's
+    // entire content and never evicted. It only memoizes across loads; within one load every
+    // file is parsed once, so caching costs the whole corpus in retained heap and buys nothing.
+    ({ data, content: body } = matter(content, {}));
   } catch {
     console.warn(`Failed to parse YAML frontmatter: ${filePath}`);
     return null;
@@ -65,7 +68,8 @@ function buildSkill(
   return {
     name: name.value,
     description: description.value,
-    agent,
+    agent: agents[0],
+    agents: [...agents],
     filePath,
     ...(trimmedBody ? { body: trimmedBody } : {}),
     argumentHint: typeof hint?.value === "string" ? hint.value : undefined,
@@ -75,23 +79,23 @@ function buildSkill(
 }
 
 export async function getAgentSkills(
-  config: AgentConfig,
+  target: ScanTarget,
   argumentHintKey?: string,
   directExecProperty?: string,
 ): Promise<{ skills: Skill[]; error?: string }> {
   let entries;
   try {
-    entries = await readdir(config.basePath, { withFileTypes: true });
+    entries = await readdir(target.basePath, { withFileTypes: true });
   } catch (err: unknown) {
     // Directory doesn't exist — silent for default paths, error for user-configured
     if (typeof err === "object" && err !== null && "code" in err && err.code === "ENOENT") {
-      return config.userConfigured
-        ? { skills: [], error: `Skill directory not found: ${config.basePath}` }
+      return target.userConfigured
+        ? { skills: [], error: `Skill directory not found: ${target.basePath}` }
         : { skills: [] };
     }
     return {
       skills: [],
-      error: `Cannot access ${config.basePath}: ${err instanceof Error ? err.message : String(err)}`,
+      error: `Cannot access ${target.basePath}: ${err instanceof Error ? err.message : String(err)}`,
     };
   }
 
@@ -99,10 +103,10 @@ export async function getAgentSkills(
     entries
       .filter((e) => e.isDirectory() && !e.name.startsWith("."))
       .map(async (dir) => {
-        const filePath = join(config.basePath, dir.name, SKILL_FILENAME);
+        const filePath = join(target.basePath, dir.name, SKILL_FILENAME);
         try {
           const content = await readFile(filePath, "utf-8");
-          return buildSkill(content, filePath, config.agent, argumentHintKey, directExecProperty);
+          return buildSkill(content, filePath, target.agents, argumentHintKey, directExecProperty);
         } catch (err) {
           console.warn(`Failed to read skill file ${filePath}:`, err);
           return null;
