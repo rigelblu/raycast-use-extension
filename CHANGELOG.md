@@ -3,6 +3,17 @@ title: Changelog
 ---
 
 # 🔵⋯ [Unreleased]
+(nothing yet)
+
+---
+
+# 🔵⋯ v0.19.1 (2026-08-23)
+## 🟠⋯ Fixed
+- 2026-08-23 - fix (user need) | skill list no longer runs out of memory when several agents share one skill folder — each folder is now read once instead of once per agent. Completes the 2026-05-25 fix below, which deduped the list but left the reads unbounded
+
+---
+
+# 🔵⋯ v0.19.0 (2026-06-29)
 ## 🟠⋯ Added
 - 2026-06-29 - feat (user need) | Codex Desktop App paste target uses rich skill links (`[$skill](/path/SKILL.md) "args"`)
 - 2026-05-23 - feat (design user need) | Antigravity agent support (~/.gemini/antigravity/skills/)
@@ -13,7 +24,6 @@ title: Changelog
 - 2026-05-18 - doc (ux) | document Raycast native accessory limitation for Esc-back agent sync
 
 ## 🟠⋯ Fixed
-- 2026-08-23 - fix (user need) | skill list no longer runs out of memory when several agents share one skill folder — each folder is now read once instead of once per agent. Completes the 2026-05-25 fix below, which deduped the list but left the reads unbounded
 - 2026-05-25 - fix (user need) | skill list no longer crashes (out of memory) when agent skill dirs symlink to one shared folder — skills are deduped by real path
 - 2026-05-17 - fix | changing agent of skill form doesn't persist it to skill search after pasting action
 - 2026-05-16 - fix (ux) | search-list agent changes now carry into the argument form
