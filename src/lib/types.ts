@@ -41,3 +41,19 @@ export interface AgentConfig {
   basePath: string;
   userConfigured?: boolean;
 }
+
+/**
+ * One physical directory to scan, plus every agent whose config resolves to it.
+ *
+ * Agent skill dirs are commonly symlinked to one shared folder, so several configs can name the
+ * same directory. Grouping by resolved path before scanning keeps each directory read once —
+ * scanning per config instead reads a shared folder once per agent and blows Raycast's worker heap.
+ */
+export interface ScanTarget {
+  /** Resolved directory (realpath), or the literal basePath when it can't be resolved. */
+  basePath: string;
+  /** Contributing agents in getAgentConfigs order; agents[0] becomes each skill's primary `agent`. */
+  agents: Agent[];
+  /** True when any contributing config was user-configured, so a missing dir is reported not silent. */
+  userConfigured: boolean;
+}
