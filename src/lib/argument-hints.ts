@@ -12,8 +12,31 @@ export interface ChoiceEntry {
 }
 
 export type ParseResult =
-  | { mode: "fields"; fields: ParsedField[]; recognized: boolean }
-  | { mode: "choices"; choices: ChoiceEntry[]; recognized: boolean };
+  | { mode: "fields"; fields: ParsedField[]; recognized: boolean; annotation?: string }
+  | { mode: "choices"; choices: ChoiceEntry[]; recognized: boolean; annotation?: string };
+
+/**
+ * Splits a trailing `# note` off a hint so it can be shown as guidance instead of parsed.
+ *
+ * Three conditions, each earning its place against a real hint:
+ * - outside every bracket, or `<feature-brief-path | #id>` loses its second alternative
+ * - followed by whitespace, so a bare `#id` at the top level still reads as a value
+ * - starting the hint or preceded by whitespace, so `<subdir># note` isn't split mid-token
+ */
+function splitAnnotation(hint: string): { hint: string; annotation?: string } {
+  let depth = 0;
+  for (let i = 0; i < hint.length; i++) {
+    const ch = hint[i];
+    if (ch === "[" || ch === "<") depth++;
+    else if (ch === "]" || ch === ">") depth = Math.max(0, depth - 1);
+    if (ch !== "#" || depth > 0) continue;
+    if (i > 0 && !/\s/.test(hint[i - 1])) continue;
+    if (!/\s/.test(hint[i + 1] ?? "")) continue;
+    const annotation = hint.slice(i + 1).trim();
+    return annotation ? { hint: hint.slice(0, i).trim(), annotation } : { hint };
+  }
+  return { hint };
+}
 
 function splitOutsideBrackets(hint: string): string[] {
   const segments: string[] = [];
@@ -33,11 +56,24 @@ function splitOutsideBrackets(hint: string): string[] {
   return segments.filter(Boolean);
 }
 
+function hasBalancedBrackets(hint: string): boolean {
+  const stack: string[] = [];
+  for (const ch of hint) {
+    if (ch === "[" || ch === "<") {
+      stack.push(ch);
+    } else if (ch === "]" || ch === ">") {
+      const expected = ch === "]" ? "[" : "<";
+      if (stack.pop() !== expected) return false;
+    }
+  }
+  return stack.length === 0;
+}
+
 function parseChoice(segment: string): ChoiceEntry {
   const argMatch = segment.match(/\[([^\]]+)\]|<([^>]+)>/);
   if (!argMatch) return { name: segment };
   const name = segment.replace(argMatch[0], "").trim();
-  const label = (argMatch[1] || argMatch[2]).trim();
+  const label = (argMatch[1] || argMatch[2]).trim().replace(/^<(.*)>$/, "$1");
   return { name, arg: { label, raw: argMatch[0] } };
 }
 
@@ -56,7 +92,17 @@ function mergeChoices(entries: ChoiceEntry[]): ChoiceEntry[] {
   return Array.from(byName.values());
 }
 
-export function parseArgumentHint(hint: string): ParseResult {
+export function parseArgumentHint(rawHint: string): ParseResult {
+  const { hint, annotation } = splitAnnotation(rawHint);
+  const result = parseHintBody(hint);
+  const recognized = result.recognized && hasBalancedBrackets(hint);
+  return { ...result, recognized, ...(annotation ? { annotation } : {}) };
+}
+
+function parseHintBody(hint: string): ParseResult {
+  // A hint that was nothing but a note leaves no arguments behind — and we understood all of it.
+  if (!hint.trim()) return { mode: "fields", fields: [], recognized: true };
+
   const segments = splitOutsideBrackets(hint);
 
   // Top-level | = choices (by design); inside [] = dropdown options
@@ -127,6 +173,10 @@ export function parseArgumentHint(hint: string): ParseResult {
         fields.push({ id: `arg-${i}`, label: words[i], type: "text", raw: words[i] });
       }
       return { mode: "fields", fields, recognized: true };
+    }
+    if (words.length === 1 && /^[\w-]+$/.test(words[0])) {
+      fields.push({ id: "arg-0", label: words[0], type: "text", raw: words[0] });
+      return { mode: "fields", fields, recognized: false };
     }
     fields.push({
       id: "arg-0",
