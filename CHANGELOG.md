@@ -7,6 +7,12 @@ title: Changelog
 
 ---
 
+# 🔵⋯ v0.20.2 (2026-08-25)
+## 🟠⋯ Added for End Users
+- 2026-08-25 - feat (user need) | know when the extension could not confidently read an argument hint instead of trusting a wrong form, with one documented grammar for writing hints (#use-63)
+
+---
+
 # 🔵⋯ v0.20.1 (2026-08-25)
 ## 🟠⋯ Added for End Users
 - 2026-08-25 - feat (user need) | explain an argument with a trailing note without breaking the form (#use-63)
