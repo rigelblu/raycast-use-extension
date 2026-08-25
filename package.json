@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.raycast.com/schemas/extension.json",
   "name": "use-skill",
-  "version": "0.20.1",
+  "version": "0.20.2",
   "title": "Use Skill",
   "description": "Search and use agent skills (claude, codex, etc.) in one place",
   "icon": "extension-icon.png",
