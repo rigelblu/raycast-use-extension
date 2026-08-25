@@ -5,6 +5,7 @@ title: Use Agent Skill
 Search and use agent skills from Antigravity, Gemini, Claude Code, Codex, Amp, Warp, Factory Droid, OpenCode, GitHub Copilot, Kilo Code, Pi, and any custom agent — all from Raycast.
 
 # 🔵⋯ Supported Agents
+
 Built-in agents are scanned automatically. All agents use the **YAML frontmatter in Markdown** format.
 
 | Agent               | Skill location                                                                            |
@@ -32,6 +33,7 @@ When Codex Desktop App is the active paste target, paste actions use its rich sk
 `[$skill](/absolute/path/to/SKILL.md) "args"`. Other apps keep the selected agent's normal invocation format.
 
 # 🔵⋯ Usage
+
 | Action                | Shortcut | Description                                                                        |
 | :-------------------- | :------- | :--------------------------------------------------------------------------------- |
 | Paste skill           | `Enter`  | Pastes skills without arguments; opens the argument form when arguments are needed |
@@ -51,20 +53,27 @@ When Codex Desktop App is the active paste target, paste actions use its rich sk
 | Open preferences      | `⌘;`     | Opens extension preferences                                                        |
 
 # 🔵⋯ Argument Form
+
 Skills with argument hints automatically show a guided form when you press `Enter`:
 
+- `<arg>` cues a required value and `[arg]` an optional one; both show text fields, without enforcement
+- `arg:[option1 | option2]` shows a dropdown with predefined options
+- Top-level choices such as `commit | commit [message]` show a choice dropdown with conditional fields
+- Other bare words show text fields in source order
+
+See the canonical [argument hint grammar](docs/argument-hint-grammar.md) for authoring rules and
+examples.
+
 # 🔵⋯ Limitations
+
 - Changing agent on the skill form doesn't persist to skill search view (when using ESC-go back)
-- `<arg>` — optional text field
-- `arg:[option1 | option2]` — dropdown with predefined options
-- Top-level choices (e.g., `commit | commit [message]`) render as a choice dropdown with conditional fields
-- All other hints show a free-form text field
 
 When a skill has a body, the argument form also offers `Paste Filled Prompt`. It replaces `$ARGUMENTS`
 with all form values joined by spaces, and `$1`, `$2`, `$3`, etc. with positional form values. Empty
 fields remain visible as placeholders like `<topic>` in the pasted prompt.
 
 # 🔵⋯ Preferences
+
 | Setting                   | Default                    | Description                                                   |
 | :------------------------ | :------------------------- | :------------------------------------------------------------ |
 | Default Agent             | All                        | Agent source pre-selected when opening the command            |
