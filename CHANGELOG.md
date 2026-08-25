@@ -7,6 +7,12 @@ title: Changelog
 
 ---
 
+# 🔵⋯ v0.20.1 (2026-08-25)
+## 🟠⋯ Added for End Users
+- 2026-08-25 - feat (user need) | explain an argument with a trailing note without breaking the form (#use-63)
+
+---
+
 # 🔵⋯ v0.20.0 (2026-08-25)
 ## 🟠⋯ Fixed for End Users
 - 2026-08-25 - fix (user need) | keep alternatives inside a required placeholder together instead of splitting them into nonsense controls (#use-63)
