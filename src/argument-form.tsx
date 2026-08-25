@@ -5,7 +5,7 @@ import { formatCodexDesktopInvocation, formatSkillInvocation, getPastePrefix, wi
 import { detectPasteSurface, type PasteSurface } from "./lib/paste-target";
 import { getPrefs } from "./lib/preferences";
 import { fillPromptBody } from "./lib/prompt-template";
-import { parseArgumentHint } from "./lib/argument-hints";
+import { parseArgumentHint, warningForArgumentHint } from "./lib/argument-hints";
 import { AGENTS, getSourceName } from "./lib/agent-config";
 import {
   clearTargetAgentOverride,
@@ -28,6 +28,10 @@ export function ArgumentForm({
   onTargetAgentReset?: () => void;
 }) {
   const parsedArgumentHint = useMemo(() => parseArgumentHint(skill.argumentHint ?? ""), [skill.argumentHint]);
+  const argumentHintWarning = useMemo(
+    () => warningForArgumentHint(skill.argumentHint ?? "", parsedArgumentHint.assessment),
+    [parsedArgumentHint.assessment, skill.argumentHint],
+  );
   const [selectedAgent, setSelectedAgent] = useState<Agent>(targetAgentOverride ?? skill.agent);
   const [hasTargetAgentOverride, setHasTargetAgentOverride] = useState(Boolean(targetAgentOverride));
   const [pasteSurface, setPasteSurface] = useState<PasteSurface>(initialPasteSurface);
@@ -43,7 +47,7 @@ export function ArgumentForm({
     const init: Record<string, string> = {};
     if (parsedArgumentHint.mode === "fields") {
       for (const field of parsedArgumentHint.fields) {
-        init[field.id] = field.type === "dropdown" && field.options ? field.options[0] : "";
+        init[field.id] = field.kind === "dropdown" ? field.options[0] : "";
       }
     }
     return init;
@@ -273,7 +277,7 @@ export function ArgumentForm({
         </>
       ) : (
         parsedArgumentHint.fields.map((field, index) =>
-          field.type === "dropdown" && field.options ? (
+          field.kind === "dropdown" ? (
             <Form.Dropdown
               key={field.id}
               id={field.id}
@@ -300,12 +304,10 @@ export function ArgumentForm({
         )
       )}
 
-      {/* Two rows saying different things: what the author told you, and what we couldn't read.
-          A hint can carry both, so neither hides the other. */}
+      {/* Parser confidence qualifies the fields, so it stays closest to them; the author's note follows.
+          A hint can carry both rows, so neither hides the other. */}
+      {argumentHintWarning && <Form.Description title={argumentHintWarning.title} text={argumentHintWarning.text} />}
       {parsedArgumentHint.annotation && <Form.Description title="Hint" text={parsedArgumentHint.annotation} />}
-      {skill.argumentHint && !parsedArgumentHint.recognized && (
-        <Form.Description title="Unparsed hint" text={skill.argumentHint} />
-      )}
       <Form.Separator />
       <Form.Description title="Paste into agent" text={pasteContent} />
     </Form>
