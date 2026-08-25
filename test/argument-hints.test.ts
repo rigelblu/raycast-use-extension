@@ -58,3 +58,47 @@ test("falls back for unrecognized structural hints", () => {
   assert.equal(result.mode, "fields");
   assert.equal(result.recognized, false);
 });
+
+test("keeps alternatives inside angle brackets in one field", () => {
+  const result = parseArgumentHint("scope:<bookmark | revision>");
+
+  assert.equal(result.mode, "fields");
+  assert.deepEqual(result.fields, [
+    {
+      id: "arg-0",
+      label: "scope",
+      type: "text",
+      raw: "<bookmark | revision>",
+    },
+  ]);
+});
+
+test("still splits top-level alternatives when a segment holds angle brackets", () => {
+  const result = parseArgumentHint("commit <rev> | bookmark <name> | abandon-empty");
+
+  assert.equal(result.mode, "choices");
+  assert.deepEqual(
+    result.choices.map((choice) => choice.name),
+    ["commit", "bookmark", "abandon-empty"],
+  );
+});
+
+test("keeps a labeled field beside an angle-bracket alternation", () => {
+  const result = parseArgumentHint("mode:[content | submit] scope:<bookmark | revision>");
+
+  assert.equal(result.mode, "fields");
+  assert.deepEqual(
+    result.fields.map((field) => [field.label, field.type]),
+    [
+      ["mode", "dropdown"],
+      ["scope", "text"],
+    ],
+  );
+});
+
+test("keeps multi-word dropdown options as written", () => {
+  const result = parseArgumentHint("type:[new venture | new product | refactor]");
+
+  assert.equal(result.mode, "fields");
+  assert.deepEqual(result.fields[0].options, ["new venture", "new product", "refactor"]);
+});
