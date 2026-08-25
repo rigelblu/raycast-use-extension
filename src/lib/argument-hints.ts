@@ -20,8 +20,8 @@ function splitOutsideBrackets(hint: string): string[] {
   let current = "";
   let depth = 0;
   for (const ch of hint) {
-    if (ch === "[") depth++;
-    else if (ch === "]") depth = Math.max(0, depth - 1);
+    if (ch === "[" || ch === "<") depth++;
+    else if (ch === "]" || ch === ">") depth = Math.max(0, depth - 1);
     if (ch === "|" && depth === 0) {
       segments.push(current.trim());
       current = "";
