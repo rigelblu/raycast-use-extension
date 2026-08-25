@@ -7,6 +7,12 @@ title: Changelog
 
 ---
 
+# 🔵⋯ v0.20.0 (2026-08-25)
+## 🟠⋯ Fixed for End Users
+- 2026-08-25 - fix (user need) | keep alternatives inside a required placeholder together instead of splitting them into nonsense controls (#use-63)
+
+---
+
 # 🔵⋯ v0.19.1 (2026-08-23)
 ## 🟠⋯ Fixed
 - 2026-08-23 - fix (user need) | skill list no longer runs out of memory when several agents share one skill folder — each folder is now read once instead of once per agent. Completes the 2026-05-25 fix below, which deduped the list but left the reads unbounded
