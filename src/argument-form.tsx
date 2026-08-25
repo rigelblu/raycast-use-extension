@@ -300,8 +300,11 @@ export function ArgumentForm({
         )
       )}
 
+      {/* Two rows saying different things: what the author told you, and what we couldn't read.
+          A hint can carry both, so neither hides the other. */}
+      {parsedArgumentHint.annotation && <Form.Description title="Hint" text={parsedArgumentHint.annotation} />}
       {skill.argumentHint && !parsedArgumentHint.recognized && (
-        <Form.Description title="Hint" text={skill.argumentHint} />
+        <Form.Description title="Unparsed hint" text={skill.argumentHint} />
       )}
       <Form.Separator />
       <Form.Description title="Paste into agent" text={pasteContent} />
