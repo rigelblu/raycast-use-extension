@@ -1,19 +1,40 @@
-export interface ParsedField {
+export interface ParsedTextField {
   id: string;
   label: string;
-  type: "text" | "dropdown";
-  options?: string[];
+  kind: "text";
   raw: string;
 }
+
+export interface ParsedDropdownField {
+  id: string;
+  label: string;
+  kind: "dropdown";
+  options: string[];
+  raw: string;
+}
+
+export type ParsedField = ParsedTextField | ParsedDropdownField;
 
 export interface ChoiceEntry {
   name: string;
   arg?: { label: string; raw: string };
 }
 
+export type ParseAssessment = "clean" | "suspect" | "unreadable";
+
+export interface ArgumentHintWarning {
+  title: string;
+  text: string;
+}
+
+type ParsedStructure = { mode: "fields"; fields: ParsedField[] } | { mode: "choices"; choices: ChoiceEntry[] };
+
 export type ParseResult =
-  | { mode: "fields"; fields: ParsedField[]; recognized: boolean; annotation?: string }
-  | { mode: "choices"; choices: ChoiceEntry[]; recognized: boolean; annotation?: string };
+  | { mode: "fields"; fields: ParsedField[]; assessment: ParseAssessment; annotation?: string }
+  | { mode: "choices"; choices: ChoiceEntry[]; assessment: ParseAssessment; annotation?: string };
+
+// Author-facing syntax and worked examples live in docs/argument-hint-grammar.md. Keep parser
+// semantics bound to that document through test/argument-hints.corpus.test.ts.
 
 /**
  * Splits a trailing `# note` off a hint so it can be shown as guidance instead of parsed.
@@ -53,20 +74,7 @@ function splitOutsideBrackets(hint: string): string[] {
     }
   }
   segments.push(current.trim());
-  return segments.filter(Boolean);
-}
-
-function hasBalancedBrackets(hint: string): boolean {
-  const stack: string[] = [];
-  for (const ch of hint) {
-    if (ch === "[" || ch === "<") {
-      stack.push(ch);
-    } else if (ch === "]" || ch === ">") {
-      const expected = ch === "]" ? "[" : "<";
-      if (stack.pop() !== expected) return false;
-    }
-  }
-  return stack.length === 0;
+  return segments;
 }
 
 function parseChoice(segment: string): ChoiceEntry {
@@ -94,30 +102,40 @@ function mergeChoices(entries: ChoiceEntry[]): ChoiceEntry[] {
 
 export function parseArgumentHint(rawHint: string): ParseResult {
   const { hint, annotation } = splitAnnotation(rawHint);
-  const result = parseHintBody(hint);
-  const recognized = result.recognized && hasBalancedBrackets(hint);
-  return { ...result, recognized, ...(annotation ? { annotation } : {}) };
+  const structure = parseHintBody(hint);
+  const assessment = assess(hint, structure);
+
+  if (structure.mode === "fields") {
+    return { ...structure, assessment, ...(annotation ? { annotation } : {}) };
+  }
+  return { ...structure, assessment, ...(annotation ? { annotation } : {}) };
 }
 
-function parseHintBody(hint: string): ParseResult {
-  // A hint that was nothing but a note leaves no arguments behind — and we understood all of it.
-  if (!hint.trim()) return { mode: "fields", fields: [], recognized: true };
+export function warningForArgumentHint(rawHint: string, assessment: ParseAssessment): ArgumentHintWarning | undefined {
+  if (assessment === "clean") return undefined;
+  const { hint } = splitAnnotation(rawHint);
+  return {
+    title: "Hint partly unread",
+    text: `Could not confidently match: ${hint}`,
+  };
+}
 
-  const segments = splitOutsideBrackets(hint);
+function parseHintBody(hint: string): ParsedStructure {
+  if (!hint.trim()) return { mode: "fields", fields: [] };
+
+  const segments = splitOutsideBrackets(hint).filter(Boolean);
 
   // Top-level | = choices (by design); inside [] = dropdown options
   if (segments.length >= 2) {
     const entries = segments.map(parseChoice);
     const merged = mergeChoices(entries);
-    const recognized = merged.every((e) => /^[\w-]+$/.test(e.name));
-    return { mode: "choices", choices: merged, recognized };
+    return { mode: "choices", choices: merged };
   }
 
   const fields: ParsedField[] = [];
   const regex = /\[([^\]]+)\]|<([^>]+)>/g;
   let match;
   let cursor = 0;
-  let hasUnparsedHintText = false;
   while ((match = regex.exec(hint)) !== null) {
     const prefix = hint.slice(cursor, match.index);
     const labelMatch = prefix.match(/(?:^|\s)([\w-]+):\s*$/);
@@ -125,11 +143,11 @@ function parseHintBody(hint: string): ParseResult {
     const labelPrefix = labelMatch?.[1] ?? adjacentLabelMatch?.[1];
     const labelStart = labelMatch?.index ?? adjacentLabelMatch?.index;
     const barePrefix = labelStart !== undefined ? prefix.slice(0, labelStart) : prefix;
-    hasUnparsedHintText = !appendBareFields(fields, barePrefix) || hasUnparsedHintText;
+    appendBareFields(fields, barePrefix);
     const idx = fields.length;
 
     if (match[1]) {
-      // [content] — optional argument or dropdown
+      // A square group is a dropdown only when it carries alternatives; otherwise it is text.
       const content = match[1];
       const options = content.includes("|")
         ? content
@@ -141,7 +159,7 @@ function parseHintBody(hint: string): ParseResult {
         fields.push({
           id: `arg-${idx}`,
           label: labelPrefix ?? options[0],
-          type: "dropdown",
+          kind: "dropdown",
           options,
           raw: match[0],
         });
@@ -149,16 +167,16 @@ function parseHintBody(hint: string): ParseResult {
         fields.push({
           id: `arg-${idx}`,
           label: labelPrefix ?? content.trim(),
-          type: "text",
+          kind: "text",
           raw: match[0],
         });
       }
     } else if (match[2]) {
-      // <content> — optional text field
+      // An angle group stays one text field even when its value lists alternatives.
       fields.push({
         id: `arg-${idx}`,
         label: labelPrefix ?? match[2].trim(),
-        type: "text",
+        kind: "text",
         raw: match[0],
       });
     }
@@ -170,41 +188,92 @@ function parseHintBody(hint: string): ParseResult {
     const words = hint.split(/\s+/).filter(Boolean);
     if (words.length >= 2) {
       for (let i = 0; i < words.length; i++) {
-        fields.push({ id: `arg-${i}`, label: words[i], type: "text", raw: words[i] });
+        fields.push({ id: `arg-${i}`, label: words[i], kind: "text", raw: words[i] });
       }
-      return { mode: "fields", fields, recognized: true };
+      return { mode: "fields", fields };
     }
-    if (words.length === 1 && /^[\w-]+$/.test(words[0])) {
-      fields.push({ id: "arg-0", label: words[0], type: "text", raw: words[0] });
-      return { mode: "fields", fields, recognized: false };
+    if (words.length === 1 && isBareWord(words[0])) {
+      fields.push({ id: "arg-0", label: words[0], kind: "text", raw: words[0] });
+      return { mode: "fields", fields };
     }
     fields.push({
       id: "arg-0",
       label: "input",
-      type: "text",
+      kind: "text",
       raw: hint,
     });
-    return { mode: "fields", fields, recognized: false };
+    return { mode: "fields", fields };
   }
 
-  hasUnparsedHintText = !appendBareFields(fields, hint.slice(cursor)) || hasUnparsedHintText;
-  const recognized = !hasUnparsedHintText;
-
-  return { mode: "fields", fields, recognized };
+  appendBareFields(fields, hint.slice(cursor));
+  return { mode: "fields", fields };
 }
 
-function appendBareFields(fields: ParsedField[], segment: string): boolean {
+function assess(hint: string, structure: ParsedStructure): ParseAssessment {
+  const labels =
+    structure.mode === "choices"
+      ? structure.choices.flatMap((choice) => (choice.arg ? [choice.name, choice.arg.label] : [choice.name]))
+      : structure.fields.map((field) => field.label);
+
+  if (labels.some(hasLeakedSyntax)) return "suspect";
+  if (!accountsForHint(hint, structure) && !isBareWord(hint)) return "unreadable";
+  return "clean";
+}
+
+function accountsForHint(hint: string, structure: ParsedStructure): boolean {
+  if (structure.mode === "choices") {
+    const authoredChoices = splitOutsideBrackets(hint).map(parseChoice);
+    return authoredChoices.every((authored) => {
+      if (!isBareWord(authored.name)) return false;
+      const parsed = structure.choices.find((choice) => choice.name === authored.name);
+      if (!parsed) return false;
+      if (!authored.arg) return true;
+      return parsed.arg?.label === authored.arg.label && parsed.arg.raw === authored.arg.raw;
+    });
+  }
+
+  let cursor = 0;
+  for (const field of structure.fields) {
+    const index = hint.indexOf(field.raw, cursor);
+    if (index < 0) return false;
+
+    const gap = hint.slice(cursor, index);
+    const isBracketGroup =
+      (field.raw.startsWith("[") && field.raw.endsWith("]")) || (field.raw.startsWith("<") && field.raw.endsWith(">"));
+    if (isBracketGroup) {
+      if (!isFieldGap(gap, field.label)) return false;
+    } else if (!isBareWord(field.raw) || gap.trim()) {
+      return false;
+    }
+    cursor = index + field.raw.length;
+  }
+  return !hint.slice(cursor).trim();
+}
+
+function isFieldGap(gap: string, label: string): boolean {
+  if (!gap.trim()) return true;
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^\\s*${escapedLabel}:?\\s*$`).test(gap);
+}
+
+function hasLeakedSyntax(label: string): boolean {
+  return /[[\]<>|]/.test(label) || label.split("<").length !== label.split(">").length;
+}
+
+function isBareWord(value: string): boolean {
+  return /^[\w-]+$/.test(value.trim());
+}
+
+function appendBareFields(fields: ParsedField[], segment: string): void {
   const text = segment.trim();
-  if (!text) return true;
-  if (!/^[\w\s-]+$/.test(text)) return false;
+  if (!text || !/^[\w\s-]+$/.test(text)) return;
 
   for (const word of text.split(/\s+/)) {
     fields.push({
       id: `arg-${fields.length}`,
       label: word,
-      type: "text",
+      kind: "text",
       raw: word,
     });
   }
-  return true;
 }
