@@ -6,6 +6,9 @@ import { detectPasteSurface, type PasteSurface } from "./lib/paste-target";
 import { getPrefs } from "./lib/preferences";
 import { fillPromptBody } from "./lib/prompt-template";
 import { parseArgumentHint, warningForArgumentHint } from "./lib/argument-hints";
+import { parseArgumentHelp, resolveArgumentHelp } from "./lib/argument-help";
+import { buildArgumentFormRows } from "./lib/argument-form-rows";
+import { buildArgumentFormTailRows } from "./lib/argument-form-tail";
 import { AGENTS, getSourceName } from "./lib/agent-config";
 import {
   clearTargetAgentOverride,
@@ -32,6 +35,10 @@ export function ArgumentForm({
     () => warningForArgumentHint(skill.argumentHint ?? "", parsedArgumentHint.assessment),
     [parsedArgumentHint.assessment, skill.argumentHint],
   );
+  const argumentHelp = useMemo(
+    () => parseArgumentHelp(skill.argumentHelp, parsedArgumentHint.mode === "fields" ? parsedArgumentHint.fields : []),
+    [parsedArgumentHint, skill.argumentHelp],
+  );
   const [selectedAgent, setSelectedAgent] = useState<Agent>(targetAgentOverride ?? skill.agent);
   const [hasTargetAgentOverride, setHasTargetAgentOverride] = useState(Boolean(targetAgentOverride));
   const [pasteSurface, setPasteSurface] = useState<PasteSurface>(initialPasteSurface);
@@ -52,6 +59,19 @@ export function ArgumentForm({
     }
     return init;
   });
+
+  const resolvedArgumentHelp = useMemo(
+    () => resolveArgumentHelp(argumentHelp.lookups, values),
+    [argumentHelp.lookups, values],
+  );
+  const argumentFormRows = useMemo(
+    () =>
+      buildArgumentFormRows(
+        parsedArgumentHint.mode === "fields" ? parsedArgumentHint.fields : [],
+        resolvedArgumentHelp,
+      ),
+    [parsedArgumentHint, resolvedArgumentHelp],
+  );
 
   const activeChoice =
     parsedArgumentHint.mode === "choices"
@@ -159,6 +179,17 @@ export function ArgumentForm({
     clearTargetAgentOverride();
     onTargetAgentReset?.();
   }
+
+  const formTailRows = useMemo(
+    () =>
+      buildArgumentFormTailRows({
+        warning: argumentHintWarning,
+        hint: parsedArgumentHint.annotation,
+        argumentHelp: argumentHelp.prose,
+        pasteContent,
+      }),
+    [argumentHelp.prose, argumentHintWarning, parsedArgumentHint.annotation, pasteContent],
+  );
 
   return (
     <Form
@@ -276,13 +307,18 @@ export function ArgumentForm({
           )}
         </>
       ) : (
-        parsedArgumentHint.fields.map((field, index) =>
-          field.kind === "dropdown" ? (
+        argumentFormRows.map((row) => {
+          if (row.kind === "contextual-help") {
+            return <Form.Description key={`${row.fieldId}-help-${row.helpIndex}`} text={row.text} />;
+          }
+
+          const { field, fieldIndex } = row;
+          return field.kind === "dropdown" ? (
             <Form.Dropdown
               key={field.id}
               id={field.id}
               title={field.label}
-              autoFocus={index === 0}
+              autoFocus={fieldIndex === 0}
               value={values[field.id]}
               onChange={(newVal) => setValues((prev) => ({ ...prev, [field.id]: newVal }))}
             >
@@ -296,20 +332,22 @@ export function ArgumentForm({
               id={field.id}
               title={field.label}
               placeholder={field.raw}
-              autoFocus={index === 0}
+              autoFocus={fieldIndex === 0}
               value={values[field.id]}
               onChange={(newVal) => setValues((prev) => ({ ...prev, [field.id]: newVal }))}
             />
-          ),
-        )
+          );
+        })
       )}
 
-      {/* Parser confidence qualifies the fields, so it stays closest to them; the author's note follows.
-          A hint can carry both rows, so neither hides the other. */}
-      {argumentHintWarning && <Form.Description title={argumentHintWarning.title} text={argumentHintWarning.text} />}
-      {parsedArgumentHint.annotation && <Form.Description title="Hint" text={parsedArgumentHint.annotation} />}
-      <Form.Separator />
-      <Form.Description title="Paste into agent" text={pasteContent} />
+      {/* Parser confidence qualifies the fields, so it stays closest to them; the author's notes follow. */}
+      {formTailRows.map((row, index) =>
+        row.kind === "separator" ? (
+          <Form.Separator key="separator" />
+        ) : (
+          <Form.Description key={`${row.title}-${index}`} title={row.title} text={row.text} />
+        ),
+      )}
     </Form>
   );
 }

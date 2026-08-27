@@ -51,6 +51,16 @@ function buildSkill(
 
   const directProp = directExecProperty ? normalizeToCamel(directExecProperty) : "disableModelInvocation";
   const disableFlag = findValue(data, directProp);
+  const metadata = data.metadata;
+  const argumentHelpValue =
+    typeof metadata === "object" &&
+    metadata !== null &&
+    !Array.isArray(metadata) &&
+    typeof (metadata as Record<string, unknown>)["argument-help"] === "string"
+      ? (metadata as Record<string, unknown>)["argument-help"]
+      : undefined;
+  const argumentHelp =
+    typeof argumentHelpValue === "string" && argumentHelpValue.trim().length > 0 ? argumentHelpValue : undefined;
 
   const knownOriginalKeys = new Set(
     [name, description, hint, disableFlag]
@@ -60,7 +70,16 @@ function buildSkill(
 
   const extraProperties: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
-    if (!knownOriginalKeys.has(key)) extraProperties[key] = value;
+    if (knownOriginalKeys.has(key)) continue;
+
+    if (key === "metadata" && argumentHelp !== undefined) {
+      const remainingMetadata = { ...(value as Record<string, unknown>) };
+      delete remainingMetadata["argument-help"];
+      if (Object.keys(remainingMetadata).length > 0) extraProperties[key] = remainingMetadata;
+      continue;
+    }
+
+    extraProperties[key] = value;
   }
 
   const trimmedBody = body.trim();
@@ -73,6 +92,7 @@ function buildSkill(
     filePath,
     ...(trimmedBody ? { body: trimmedBody } : {}),
     argumentHint: typeof hint?.value === "string" ? hint.value : undefined,
+    ...(argumentHelp ? { argumentHelp } : {}),
     disableModelInvocation: disableFlag?.value === true || disableFlag?.value === "true" ? true : undefined,
     ...(Object.keys(extraProperties).length > 0 ? { extraProperties } : {}),
   };
