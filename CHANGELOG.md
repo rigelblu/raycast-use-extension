@@ -5,6 +5,7 @@ title: Changelog
 # 🔵⋯ [Unreleased]
 ## 🟠⋯ Added
 - 2026-08-24 - feat (user need) | Codex skill pastes lead with `$` in the CLI, matching the sigil the Desktop app already showed inside its rich link
+- 2026-08-28 - feat (user need) | understand non-obvious skill arguments without leaving the form, with dense lookups reduced to the current contextual value beneath each affected dropdown (#use-68)
 
 ---
 

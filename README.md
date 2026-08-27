@@ -64,6 +64,11 @@ Skills with argument hints automatically show a guided form when you press `Ente
 See the canonical [argument hint grammar](docs/argument-hint-grammar.md) for authoring rules and
 examples.
 
+Skills can also provide `metadata["argument-help"]` for explanation that does not fit in the compact
+argument hint. Ordinary prose stays in an `Argument help` row; canonical lookup tables resolve the
+current selection into a short value immediately beneath the dropdown they explain. See the
+[argument-help authoring contract](docs/argument-help.md) for the exact binding and source rules.
+
 # 🔵⋯ Limitations
 
 - Changing agent on the skill form doesn't persist to skill search view (when using ESC-go back)

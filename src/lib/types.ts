@@ -31,6 +31,7 @@ export interface Skill {
 
   // Properties drive skill list UI behaviour
   argumentHint?: string;
+  argumentHelp?: string;
   disableModelInvocation?: boolean;
   // All other properties go to extraProperties
   extraProperties?: Record<string, unknown>;

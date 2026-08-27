@@ -96,6 +96,67 @@ ARGUMENT_HINT: topic
   }
 });
 
+test("loads exact nested argument help and preserves unconsumed metadata", async () => {
+  const basePath = await mkdtemp(join(tmpdir(), "use-skill-loader-"));
+  try {
+    const fixtures = {
+      valid: `metadata:
+  argument-help: |-
+    mode — Choose how to run.
+
+    family — Choose which model family to use.
+  sibling: keep
+docs: generic docs
+`,
+      blank: `metadata:
+  argument-help: "   "
+`,
+      nonString: `metadata:
+  argument-help:
+    - nope
+`,
+      topLevel: `argument-help: not nested
+docs: generic docs
+`,
+    };
+
+    for (const [name, frontmatter] of Object.entries(fixtures)) {
+      await mkdir(join(basePath, name));
+      await writeFile(
+        join(basePath, name, "SKILL.md"),
+        `---
+name: ${name}
+description: ${name} skill
+${frontmatter}---
+`,
+      );
+    }
+
+    const result = await getAgentSkills({ agents: ["codex"], basePath, userConfigured: false });
+    const skills = new Map(result.skills.map((skill) => [skill.name, skill]));
+
+    assert.equal(
+      skills.get("valid")?.argumentHelp,
+      "mode — Choose how to run.\n\nfamily — Choose which model family to use.",
+    );
+    assert.deepEqual(skills.get("valid")?.extraProperties, {
+      metadata: { sibling: "keep" },
+      docs: "generic docs",
+    });
+    assert.equal(skills.get("blank")?.argumentHelp, undefined);
+    assert.deepEqual(skills.get("blank")?.extraProperties, { metadata: { "argument-help": "   " } });
+    assert.equal(skills.get("nonString")?.argumentHelp, undefined);
+    assert.deepEqual(skills.get("nonString")?.extraProperties, { metadata: { "argument-help": ["nope"] } });
+    assert.equal(skills.get("topLevel")?.argumentHelp, undefined);
+    assert.deepEqual(skills.get("topLevel")?.extraProperties, {
+      "argument-help": "not nested",
+      docs: "generic docs",
+    });
+  } finally {
+    await rm(basePath, { recursive: true, force: true });
+  }
+});
+
 test("silences missing default directories but reports missing user-configured directories", async () => {
   const missingPath = join(tmpdir(), `use-skill-missing-${Date.now()}`);
 
