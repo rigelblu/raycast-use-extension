@@ -74,8 +74,9 @@ current selection into a short value immediately beneath the dropdown they expla
 - Changing agent on the skill form doesn't persist to skill search view (when using ESC-go back)
 
 When a skill has a body, the argument form also offers `Paste Filled Prompt`. It replaces `$ARGUMENTS`
-with all form values joined by spaces, and `$1`, `$2`, `$3`, etc. with positional form values. Empty
-fields remain visible as placeholders like `<topic>` in the pasted prompt.
+with all form values joined by spaces, and `$0`, `$1`, `$2`, etc. with positional form values —
+**zero-based, so `$0` is the first field in the argument hint**. Empty fields remain visible as
+placeholders like `<topic>` in the pasted prompt.
 
 # 🔵⋯ Preferences
 

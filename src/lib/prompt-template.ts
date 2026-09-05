@@ -14,8 +14,10 @@ export function fillPromptBody(body: string, args: string[]): string {
   return body.replace(/\$(ARGUMENTS|\d+)(?![\w+])/g, (token, key: string) => {
     if (key === "ARGUMENTS") return joinedArgs;
 
-    const index = Number(key) - 1;
-    if (index < 0 || index >= args.length) return token;
+    // Placeholders are zero-based: `$0` is the first argument. That is the corpus convention —
+    // every installed skill that reads positionals starts at `$0`, and none starts at `$1`.
+    const index = Number(key);
+    if (index >= args.length) return token;
 
     return args[index];
   });
