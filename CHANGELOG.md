@@ -3,6 +3,11 @@ title: Changelog
 ---
 
 # 🔵⋯ [Unreleased]
+(none)
+
+---
+
+# 🔵⋯ v0.21.1 (2026-09-05)
 ## 🟠⋯ Fixed
 - 2026-09-05 - fix (user need) | `Paste Filled Prompt` now fills `$0` with the first argument, matching how skills are written — it previously left `$0` untouched and gave `$1` the first value instead of the second (#use-40) [@use]
 
