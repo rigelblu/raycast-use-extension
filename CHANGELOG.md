@@ -7,6 +7,12 @@ title: Changelog
 
 ---
 
+# 🔵⋯ v0.22.0 (2026-10-09)
+## 🟠⋯ Added
+- 2026-10-09 - feat (user need) | paste a pi skill with its `/skill:` prefix instead of typing it myself (#use-72) [@use]
+
+---
+
 # 🔵⋯ v0.21.1 (2026-09-05)
 ## 🟠⋯ Fixed
 - 2026-09-05 - fix (user need) | `Paste Filled Prompt` now fills `$0` with the first argument, matching how skills are written — it previously left `$0` untouched and gave `$1` the first value instead of the second (#use-40) [@use]
