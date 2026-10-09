@@ -88,6 +88,7 @@ export const AGENTS: Record<Agent, AgentProfile> = {
     iconSource: "logo-pi.svg",
     invocationStyle: "slash",
     scanPath: "~/.pi/agent/skills",
+    nativePrefix: "/skill:",
   },
   warp: {
     displayName: "Warp",

@@ -12,7 +12,7 @@ const PASTE_PREFIX_BY_STYLE: Record<InvocationStyle, string> = {
 };
 
 /** Sigils that attach straight to a skill name — no separating space, no backtick wrap. */
-const SIGIL_PREFIXES = new Set(["/", "@", "$"]);
+const SIGIL_PREFIXES = new Set(["/", "@", "$", ":"]);
 
 /** True when the prefix ends in a sigil: "/", "@", "$", or a word ending in one like "foo/". */
 function isSigilPrefix(prefix: string): boolean {

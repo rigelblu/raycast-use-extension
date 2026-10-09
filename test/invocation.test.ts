@@ -4,6 +4,7 @@ import {
   formatCodexDesktopInvocation,
   formatSkillInvocation,
   formatSkillPasteContent,
+  formatSkillPastePreview,
   getPastePrefix,
   withPrefix,
 } from "../src/lib/invocation";
@@ -26,6 +27,7 @@ test("formats wrapped-style agent invocations and escapes backticks in skill nam
 test("returns agent paste prefixes by invocation style", () => {
   assert.equal(getPastePrefix("warp", NATIVE), "/");
   assert.equal(getPastePrefix("gemini", NATIVE), "use skill");
+  assert.equal(getPastePrefix("pi", NATIVE), "/skill:");
 });
 
 test("formats Codex agent with native $ prefix (slash style, no backticks, no space separator)", () => {
@@ -33,6 +35,33 @@ test("formats Codex agent with native $ prefix (slash style, no backticks, no sp
   assert.equal(formatSkillInvocation("codex", "vcs-change", ["arg"], NATIVE), 'vcs-change "arg"');
   assert.equal(withPrefix("vcs-change", "$"), "$vcs-change");
   assert.equal(withPrefix('vcs-change "arg"', "$"), '$vcs-change "arg"');
+});
+
+test("formats Pi agent with native /skill: prefix (slash style, no backticks, no space separator)", () => {
+  const skill: Skill = {
+    name: "vcs-change",
+    description: "Format git commit message",
+    agent: "pi",
+    filePath: "/Users/tomhosiawa/.pi/agent/skills/vcs-change/SKILL.md",
+    argumentHint: "[extra_instructions]",
+  };
+
+  assert.equal(getPastePrefix("pi", NATIVE), "/skill:");
+  assert.equal(formatSkillInvocation("pi", "vcs-change", ["commit"], NATIVE), 'vcs-change "commit"');
+  assert.equal(withPrefix("vcs-change", "/skill:"), "/skill:vcs-change");
+  assert.equal(withPrefix('vcs-change "commit"', "/skill:"), '/skill:vcs-change "commit"');
+  assert.equal(
+    formatSkillPasteContent(skill, "pi", NATIVE, "default", ["commit"]),
+    '/skill:vcs-change "commit"',
+  );
+  assert.equal(
+    formatSkillPasteContent(skill, "pi", NATIVE, "default", undefined),
+    "/skill:vcs-change",
+  );
+  assert.equal(
+    formatSkillPastePreview(skill, "pi", NATIVE, "default"),
+    "/skill:vcs-change [extra_instructions]",
+  );
 });
 
 test("formats Codex Desktop App invocations as a markdown skill link with quoted args", () => {
@@ -71,6 +100,8 @@ test("adds a separator unless the prefix is slash-style or already spaced", () =
   assert.equal(withPrefix("vcs-change", "/"), "/vcs-change");
   assert.equal(withPrefix("vcs-change", "@"), "@vcs-change");
   assert.equal(withPrefix("vcs-change", "$"), "$vcs-change");
+  assert.equal(withPrefix("vcs-change", "/skill:"), "/skill:vcs-change");
+  assert.equal(withPrefix("vcs-change", ":"), ":vcs-change");
   assert.equal(withPrefix("vcs-change", ""), "vcs-change");
 });
 
@@ -80,6 +111,14 @@ test("treats a general $ prefix as slash-style for every agent, not just Codex",
   for (const agent of ["gemini", "warp"] as const) {
     assert.equal(formatSkillInvocation(agent, "vcs-change", undefined, prefs), "vcs-change");
     assert.equal(withPrefix("vcs-change", getPastePrefix(agent, prefs)), "$vcs-change");
+  }
+});
+
+test("treats a general prefix ending in : as slash-style for every agent", () => {
+  const prefs = { prefixStyle: "general" as const, generalPrefix: "/skill:" };
+  for (const agent of ["gemini", "warp"] as const) {
+    assert.equal(formatSkillInvocation(agent, "vcs-change", undefined, prefs), "vcs-change");
+    assert.equal(withPrefix("vcs-change", getPastePrefix(agent, prefs)), "/skill:vcs-change");
   }
 });
 
