@@ -238,7 +238,7 @@
     "test": "tsc -p tsconfig.test.json && node --require ./test/raycast-mock.js --test .test-build/test/*.test.js"
   },
   "dependencies": {
-    "@raycast/api": "^1.93.3",
+    "@raycast/api": "^2.14.0",
     "@raycast/utils": "^1.19.1",
     "gray-matter": "^4.0.3"
   },
