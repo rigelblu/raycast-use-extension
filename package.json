@@ -239,7 +239,7 @@
   },
   "dependencies": {
     "@raycast/api": "^1.93.3",
-    "@raycast/utils": "^1.19.1",
+    "@raycast/utils": "^2.3.3",
     "gray-matter": "^4.0.3"
   },
   "devDependencies": {
